@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat App</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    #chatBox { width: 80%; margin: 20px auto; background: #fff; height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
+    #messageArea { display: flex; justify-content: center; margin: 20px; }
+    #message { width: 70%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    #sendBtn { padding: 10px 20px; border: none; background-color: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+    #sendBtn:hover { background-color: #0056b3; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center;">Welcome to Chat</h2>
+  <div id="chatBox"></div>
+
+  <div id="messageArea">
+    <input type="text" id="message" placeholder="Type your message here..." />
+    <button id="sendBtn" onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const socket = new SockJS("http://localhost:8080/chat");
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, (frame) => {
+      console.log("Connected: " + frame);
+      stompClient.subscribe("/topic/messages", (messageOutput) => {
+        const msg = JSON.parse(messageOutput.body);
+        showMessage(msg.sender + ": " + msg.content);
+      });
+    });
+
+    function sendMessage() {
+      const sender = localStorage.getItem("username") || "Anonymous";
+      const messageField = document.getElementById("message");
+      if (!messageField) return;
+
+      const content = messageField.value.trim();
+      if (content === "") return;
+
+      stompClient.send("/app/sendMessage", {}, JSON.stringify({ sender, content }));
+      messageField.value = "";
+    }
+
+    function showMessage(message) {
+      const chatBox = document.getElementById("chatBox");
+      const p = document.createElement("p");
+      p.textContent = message;
+      chatBox.appendChild(p);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
